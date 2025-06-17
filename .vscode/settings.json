@@ -1,0 +1,72 @@
+{
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows",
+        "VCPKG_MANIFEST_MODE": "OFF"
+    },
+    "cmake.generator": "Visual Studio 17 2022",
+    "cmake.preferredGenerators": [
+        "Visual Studio 17 2022",
+        "Visual Studio 16 2019",
+        "Ninja"
+    ],
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.installPrefix": "${workspaceFolder}/install",
+    "cmake.configureOnOpen": true,
+    "cmake.buildBeforeRun": true,
+    "cmake.clearOutputBeforeBuild": true,
+    
+    "files.associations": {
+        "*.h": "cpp",
+        "*.cpp": "cpp",
+        "*.hpp": "cpp",
+        "*.c": "c"
+    },
+    
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.default.intelliSenseMode": "windows-msvc-x64",
+    "C_Cpp.default.compilerPath": "",
+    "C_Cpp.default.cStandard": "c17",
+    "C_Cpp.default.cppStandard": "c++17",
+    
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    
+    "files.encoding": "utf8",
+    "files.eol": "\r\n",
+    
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    "terminal.integrated.profiles.windows": {
+        "Command Prompt": {
+            "path": "cmd.exe",
+            "args": []
+        },
+        "PowerShell": {
+            "path": "powershell.exe",
+            "args": []
+        },
+        "Developer Command Prompt": {
+            "path": "cmd.exe",
+            "args": [
+                "/k",
+                "\"C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/Tools/VsDevCmd.bat\""
+            ]
+        }
+    },
+    
+    "git.ignoreLimitWarning": true,
+    
+    "search.exclude": {
+        "**/build": true,
+        "**/install": true,
+        "**/.git": true,
+        "**/node_modules": true
+    },
+    
+    "files.exclude": {
+        "**/build": true,
+        "**/install": true
+    }
+}

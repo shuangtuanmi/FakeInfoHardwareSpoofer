@@ -1,0 +1,36 @@
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${env:VCPKG_ROOT}/installed/x64-windows/include",
+                "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/*/include",
+                "C:/Program Files (x86)/Windows Kits/10/Include/*/um",
+                "C:/Program Files (x86)/Windows Kits/10/Include/*/ucrt",
+                "C:/Program Files (x86)/Windows Kits/10/Include/*/shared",
+                "C:/Program Files (x86)/Windows Kits/10/Include/*/winrt",
+                "C:/Program Files (x86)/Windows Kits/10/Include/*/cppwinrt"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "WIN32",
+                "_WIN32",
+                "_WIN64",
+                "_WINDOWS",
+                "NOMINMAX",
+                "WIN32_LEAN_AND_MEAN"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.37.32822/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "fakeinfo-hardware-spoofer",
+  "version": "1.0.0",
+  "description": "Hardware Information Spoofing Tool",
+  "homepage": "https://github.com/shuangtuanmi/FakeInfoHardwareSpoofer",
+  "license": "MIT",
+  "dependencies": [
+    {
+      "name": "qt5-base",
+      "features": ["latest"]
+    },
+    {
+      "name": "qt5-widgets"
+    },
+    {
+      "name": "qt5-network"
+    },
+    {
+      "name": "detours",
+      "platform": "windows"
+    }
+  ],
+  "features": {
+    "tests": {
+      "description": "Build test programs",
+      "dependencies": []
+    }
+  },
+  "builtin-baseline": "a42af01b72c28a8e1d7b48107b33e4f286a55ef6"
+}

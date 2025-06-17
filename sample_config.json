@@ -1,0 +1,77 @@
+{
+  "biosVendor": "American Megatrends Inc.",
+  "biosVersion": "2.15.1236",
+  "biosDate": "12/15/2023",
+  "biosSerial": "AMI-20231215-1234567890",
+  "systemUuid": "12345678-1234-1234-1234-123456789ABC",
+  
+  "motherboardManufacturer": "ASUSTeK COMPUTER INC.",
+  "motherboardProduct": "ROG STRIX Z490-E GAMING",
+  "motherboardVersion": "Rev 1.xx",
+  "motherboardSerial": "MB1234567890",
+  
+  "cpuManufacturer": "Intel Corporation",
+  "cpuName": "Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz",
+  "cpuId": "BFEBFBFF000A0655",
+  "cpuSerial": "CPU1234567890",
+  "cpuCores": 8,
+  "cpuThreads": 16,
+  
+  "memoryManufacturers": [
+    "Samsung",
+    "SK Hynix"
+  ],
+  "memoryPartNumbers": [
+    "M378A1K43CB2-CTD",
+    "HMA81GU6AFR8N-UH"
+  ],
+  "memorySerials": [
+    "MEM1234567890",
+    "MEM0987654321"
+  ],
+  "totalMemoryGB": 32,
+  
+  "diskModels": [
+    "Samsung SSD 980 PRO 1TB",
+    "Western Digital WD Blue 2TB"
+  ],
+  "diskSerials": [
+    "S5GXNX0R123456",
+    "WD-WCC4N7ABCDEF"
+  ],
+  "diskFirmwares": [
+    "5B2QGXA7",
+    "01.01A01"
+  ],
+  "diskSizes": [
+    "1000204886016",
+    "2000398934016"
+  ],
+  
+  "gpuNames": [
+    "NVIDIA GeForce RTX 3080"
+  ],
+  "gpuManufacturers": [
+    "NVIDIA Corporation"
+  ],
+  "gpuDriverVersions": [
+    "31.0.15.2849"
+  ],
+  
+  "nicNames": [
+    "Intel(R) Ethernet Controller I225-V"
+  ],
+  "nicManufacturers": [
+    "Intel Corporation"
+  ],
+  "nicMacAddresses": [
+    "00:11:22:33:44:55"
+  ],
+  
+  "audioDeviceNames": [
+    "Realtek High Definition Audio"
+  ],
+  "audioManufacturers": [
+    "Realtek Semiconductor Corp."
+  ]
+}

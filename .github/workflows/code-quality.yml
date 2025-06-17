@@ -1,0 +1,243 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  code-analysis:
+    runs-on: windows-2022
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: '2023.11.20'
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v1.3
+
+    - name: Setup CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Install dependencies
+      run: |
+        ${{ github.workspace }}/vcpkg/vcpkg.exe install qt5-base:x64-windows qt5-tools:x64-windows detours:x64-windows
+      env:
+        VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+    - name: Configure CMake with Debug info
+      run: |
+        cmake -B ${{ github.workspace }}/build `
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake `
+          -DVCPKG_TARGET_TRIPLET=x64-windows `
+          -DCMAKE_BUILD_TYPE=Debug `
+          -G "Visual Studio 17 2022" -A x64
+      env:
+        VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+    - name: Build for analysis
+      run: cmake --build ${{ github.workspace }}/build --config Debug
+
+    - name: Check code formatting
+      run: |
+        Write-Host "Checking code formatting..."
+        
+        # Check for common code style issues
+        $cppFiles = Get-ChildItem -Path . -Include "*.cpp", "*.h" -Recurse | Where-Object { $_.FullName -notmatch "build|vcpkg" }
+        
+        $issues = @()
+        
+        foreach ($file in $cppFiles) {
+          $content = Get-Content $file.FullName -Raw
+          
+          # Check for tabs vs spaces
+          if ($content -match "`t") {
+            $issues += "File $($file.Name): Contains tabs instead of spaces"
+          }
+          
+          # Check for trailing whitespace
+          $lines = Get-Content $file.FullName
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "\s+$") {
+              $issues += "File $($file.Name): Line $($i+1) has trailing whitespace"
+            }
+          }
+          
+          # Check for very long lines (>120 characters)
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i].Length -gt 120) {
+              $issues += "File $($file.Name): Line $($i+1) is too long ($($lines[$i].Length) characters)"
+            }
+          }
+        }
+        
+        if ($issues.Count -gt 0) {
+          Write-Host "Code style issues found:" -ForegroundColor Yellow
+          $issues | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+          Write-Host "Consider fixing these issues for better code quality" -ForegroundColor Yellow
+        } else {
+          Write-Host "✓ No major code style issues found" -ForegroundColor Green
+        }
+      shell: powershell
+
+    - name: Check for security issues
+      run: |
+        Write-Host "Checking for potential security issues..."
+        
+        $cppFiles = Get-ChildItem -Path . -Include "*.cpp", "*.h" -Recurse | Where-Object { $_.FullName -notmatch "build|vcpkg" }
+        
+        $securityIssues = @()
+        
+        foreach ($file in $cppFiles) {
+          $content = Get-Content $file.FullName -Raw
+          
+          # Check for potentially unsafe functions
+          $unsafeFunctions = @("strcpy", "strcat", "sprintf", "gets", "scanf")
+          foreach ($func in $unsafeFunctions) {
+            if ($content -match "\b$func\s*\(") {
+              $securityIssues += "File $($file.Name): Uses potentially unsafe function '$func'"
+            }
+          }
+          
+          # Check for hardcoded credentials or keys
+          if ($content -match "(password|key|secret)\s*=\s*[`"'][^`"']+[`"']") {
+            $securityIssues += "File $($file.Name): Potential hardcoded credential found"
+          }
+          
+          # Check for SQL injection patterns
+          if ($content -match "SELECT.*\+.*\+") {
+            $securityIssues += "File $($file.Name): Potential SQL injection vulnerability"
+          }
+        }
+        
+        if ($securityIssues.Count -gt 0) {
+          Write-Host "Potential security issues found:" -ForegroundColor Red
+          $securityIssues | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
+          Write-Host "Please review these issues carefully" -ForegroundColor Red
+        } else {
+          Write-Host "✓ No obvious security issues found" -ForegroundColor Green
+        }
+      shell: powershell
+
+    - name: Check documentation
+      run: |
+        Write-Host "Checking documentation..."
+        
+        $requiredDocs = @("README.md", "QUICKSTART.md", "HOOK_TESTING.md")
+        $missingDocs = @()
+        
+        foreach ($doc in $requiredDocs) {
+          if (-not (Test-Path $doc)) {
+            $missingDocs += $doc
+          }
+        }
+        
+        if ($missingDocs.Count -gt 0) {
+          Write-Host "Missing documentation files:" -ForegroundColor Yellow
+          $missingDocs | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+        } else {
+          Write-Host "✓ All required documentation files present" -ForegroundColor Green
+        }
+        
+        # Check if README has basic sections
+        if (Test-Path "README.md") {
+          $readmeContent = Get-Content "README.md" -Raw
+          $requiredSections = @("# ", "## ", "### ")
+          $hasStructure = $false
+          
+          foreach ($section in $requiredSections) {
+            if ($readmeContent -match $section) {
+              $hasStructure = $true
+              break
+            }
+          }
+          
+          if ($hasStructure) {
+            Write-Host "✓ README.md has proper structure" -ForegroundColor Green
+          } else {
+            Write-Host "README.md lacks proper markdown structure" -ForegroundColor Yellow
+          }
+        }
+      shell: powershell
+
+    - name: Check dependencies
+      run: |
+        Write-Host "Checking dependencies..."
+        
+        # Check if vcpkg.json exists and is valid
+        if (Test-Path "vcpkg.json") {
+          try {
+            $vcpkgConfig = Get-Content "vcpkg.json" | ConvertFrom-Json
+            Write-Host "✓ vcpkg.json is valid JSON" -ForegroundColor Green
+            
+            if ($vcpkgConfig.dependencies) {
+              Write-Host "Dependencies found:" -ForegroundColor Cyan
+              $vcpkgConfig.dependencies | ForEach-Object {
+                if ($_ -is [string]) {
+                  Write-Host "  - $_" -ForegroundColor Cyan
+                } else {
+                  Write-Host "  - $($_.name)" -ForegroundColor Cyan
+                }
+              }
+            }
+          } catch {
+            Write-Host "vcpkg.json is not valid JSON" -ForegroundColor Red
+          }
+        } else {
+          Write-Host "vcpkg.json not found" -ForegroundColor Yellow
+        }
+        
+        # Check CMakeLists.txt for common issues
+        if (Test-Path "CMakeLists.txt") {
+          $cmakeContent = Get-Content "CMakeLists.txt" -Raw
+          
+          if ($cmakeContent -match "cmake_minimum_required") {
+            Write-Host "✓ CMakeLists.txt has minimum version requirement" -ForegroundColor Green
+          } else {
+            Write-Host "CMakeLists.txt missing cmake_minimum_required" -ForegroundColor Yellow
+          }
+          
+          if ($cmakeContent -match "project\s*\(") {
+            Write-Host "✓ CMakeLists.txt has project declaration" -ForegroundColor Green
+          } else {
+            Write-Host "CMakeLists.txt missing project declaration" -ForegroundColor Yellow
+          }
+        }
+      shell: powershell
+
+  license-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check license headers
+      run: |
+        echo "Checking for license headers in source files..."
+        
+        # Find all C++ source files
+        cpp_files=$(find . -name "*.cpp" -o -name "*.h" | grep -v build | grep -v vcpkg)
+        
+        missing_license=()
+        
+        for file in $cpp_files; do
+          if ! grep -q -i "copyright\|license\|mit\|gpl" "$file"; then
+            missing_license+=("$file")
+          fi
+        done
+        
+        if [ ${#missing_license[@]} -gt 0 ]; then
+          echo "Files missing license headers:"
+          printf '%s\n' "${missing_license[@]}"
+          echo "Consider adding appropriate license headers"
+        else
+          echo "✓ All source files have license information"
+        fi
