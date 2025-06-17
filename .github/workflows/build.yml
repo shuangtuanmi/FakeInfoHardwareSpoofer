@@ -19,13 +19,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: "2023.11.20"
+          vcpkgGitCommitId: "a42af01b72c28a8e1d7b48107b33e4f286a55ef6"
           vcpkgDirectory: "${{ github.workspace }}/vcpkg"
 
       - name: Setup MSVC
@@ -43,7 +41,7 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          ${{ github.workspace }}/vcpkg/vcpkg.exe install qt5-base:x64-windows qt5-tools:x64-windows detours:x64-windows
+          ${{ github.workspace }}/vcpkg/vcpkg.exe install --triplet x64-windows
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
