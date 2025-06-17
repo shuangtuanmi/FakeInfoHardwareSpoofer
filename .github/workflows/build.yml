@@ -61,28 +61,52 @@ jobs:
       - name: Build
         run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
 
-      - name: Deploy Qt libraries
+            - name: Deploy Qt libraries
         run: |
           # Find windeployqt and deploy Qt libraries
-          $qtDir = "${{ env.Qt5_Dir }}"
+          $qtDir = "$env:Qt5_Dir"
           $windeployqt = Join-Path $qtDir "bin\windeployqt.exe"
-
+          $targetExe = "${{ github.workspace }}/build/bin/FakeInfoHardwareSpoofer.exe"
+          
+          Write-Host "Qt Directory: $qtDir"
+          Write-Host "Looking for windeployqt at: $windeployqt"
+          Write-Host "Target executable: $targetExe"
+          
           if (Test-Path $windeployqt) {
             Write-Host "Found windeployqt at: $windeployqt"
-            & $windeployqt --no-angle --no-translations --no-system-d3d-compiler --no-opengl-sw "${{ github.workspace }}/build/bin/FakeInfoHardwareSpoofer.exe"
-            Write-Host "✓ Qt libraries deployed successfully"
+            & $windeployqt --no-angle --no-translations --no-system-d3d-compiler --no-opengl-sw $targetExe
+            Write-Host "Qt libraries deployed successfully"
           } else {
             Write-Warning "windeployqt not found at: $windeployqt"
+            Write-Host "Available files in Qt bin directory:"
+            if (Test-Path (Join-Path $qtDir "bin")) {
+              Get-ChildItem (Join-Path $qtDir "bin") | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Name)" }
+            }
           }
         shell: powershell
 
       - name: Copy additional files
         run: |
           # Copy sample config to build directory
-          Copy-Item "sample_config.json" "${{ github.workspace }}/build/bin/hardware_config.json"
-          # Copy README
-          Copy-Item "README.md" "${{ github.workspace }}/build/bin/"
-          Write-Host "✓ Additional files copied"
+          $buildBin = "${{ github.workspace }}/build/bin"
+          
+          Write-Host "Copying additional files to: $buildBin"
+          
+          if (Test-Path "sample_config.json") {
+            Copy-Item "sample_config.json" "$buildBin/hardware_config.json"
+            Write-Host "Copied sample_config.json to hardware_config.json"
+          } else {
+            Write-Warning "sample_config.json not found"
+          }
+          
+          if (Test-Path "README.md") {
+            Copy-Item "README.md" "$buildBin/"
+            Write-Host "Copied README.md"
+          } else {
+            Write-Warning "README.md not found"
+          }
+          
+          Write-Host "Additional files copying completed"
         shell: powershell
 
       - name: Install NSIS
@@ -93,39 +117,72 @@ jobs:
           Write-Host "NSIS installed successfully"
         shell: powershell
 
-      - name: Package with CPack (NSIS installer)
+            - name: Package with CPack (NSIS installer)
         run: |
-          cd build
-          # Generate NSIS installer
+          Set-Location "${{ github.workspace }}/build"
+          Write-Host "Current directory: $(Get-Location)"
+          
+          Write-Host "Generating NSIS installer..."
           cpack -G NSIS -C Release
-
-          # Also generate ZIP for backup
-          cpack -G ZIP -C Release
-
-          Write-Host "✓ Packages created successfully"
-          Get-ChildItem -Filter "*.exe" | ForEach-Object { Write-Host "  Installer: $($_.Name)" }
-          Get-ChildItem -Filter "*.zip" | ForEach-Object { Write-Host "  Archive: $($_.Name)" }
-        shell: powershell
-
-      - name: Verify package contents
-        run: |
-          Write-Host "Checking package contents..."
-          cd build
-
-          Write-Host "=== Build directory contents ==="
-          Get-ChildItem -Name
-
-          Write-Host "`n=== Binary directory contents ==="
-          if (Test-Path "bin") {
-            Get-ChildItem "bin" -Name
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "NSIS installer generation failed"
+            exit 1
           }
-
-          Write-Host "`n=== Package files ==="
+          
+          Write-Host "Generating ZIP archive..."
+          cpack -G ZIP -C Release
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "ZIP archive generation failed"
+            exit 1
+          }
+          
+          Write-Host "Packages created successfully"
+          Write-Host "Generated files:"
           Get-ChildItem -Filter "*.exe" | ForEach-Object { 
-            Write-Host "  Installer: $($_.Name) ($([math]::Round($_.Length/1MB, 2)) MB)"
+            Write-Host "  Installer: $($_.Name) ($(([math]::Round($_.Length/1MB, 2))) MB)"
           }
           Get-ChildItem -Filter "*.zip" | ForEach-Object { 
-            Write-Host "  Archive: $($_.Name) ($([math]::Round($_.Length/1MB, 2)) MB)"
+            Write-Host "  Archive: $($_.Name) ($(([math]::Round($_.Length/1MB, 2))) MB)"
+          }
+        shell: powershell
+
+            - name: Verify package contents
+        run: |
+          Write-Host "Checking package contents..."
+          Set-Location "${{ github.workspace }}/build"
+          
+          Write-Host "=== Build directory contents ==="
+          Get-ChildItem -Name
+          
+          Write-Host ""
+          Write-Host "=== Binary directory contents ==="
+          if (Test-Path "bin") {
+            Get-ChildItem "bin" -Name
+          } else {
+            Write-Host "bin directory not found"
+          }
+          
+          Write-Host ""
+          Write-Host "=== Package files ==="
+          $exeFiles = Get-ChildItem -Filter "*.exe"
+          $zipFiles = Get-ChildItem -Filter "*.zip"
+          
+          if ($exeFiles.Count -gt 0) {
+            $exeFiles | ForEach-Object { 
+              $sizeMB = [math]::Round($_.Length/1MB, 2)
+              Write-Host "  Installer: $($_.Name) ($sizeMB MB)"
+            }
+          } else {
+            Write-Host "  No .exe files found"
+          }
+          
+          if ($zipFiles.Count -gt 0) {
+            $zipFiles | ForEach-Object { 
+              $sizeMB = [math]::Round($_.Length/1MB, 2)
+              Write-Host "  Archive: $($_.Name) ($sizeMB MB)"
+            }
+          } else {
+            Write-Host "  No .zip files found"
           }
         shell: powershell
 
