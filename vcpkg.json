@@ -6,14 +6,9 @@
   "license": "MIT",
   "dependencies": [
     {
-      "name": "qt5-base",
-      "features": ["latest"]
-    },
-    {
-      "name": "qt5-widgets"
-    },
-    {
-      "name": "qt5-network"
+      "name": "qtbase",
+      "default-features": false,
+      "features": ["gui", "widgets", "network"]
     },
     {
       "name": "detours",
@@ -26,5 +21,5 @@
       "dependencies": []
     }
   },
-  "builtin-baseline": "a42af01b72c28a8e1d7b48107b33e4f286a55ef6"
+  "builtin-baseline": "3508985146f1b1d248c47943079a5ac49a4a7c50"
 }
