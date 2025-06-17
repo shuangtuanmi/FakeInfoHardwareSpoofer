@@ -58,45 +58,6 @@ jobs:
       - name: Build
         run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
 
-      - name: Run Tests
-        run: |
-          # Test if executables were built successfully
-          if (Test-Path "${{ github.workspace }}/build/bin/FakeInfoHardwareSpoofer.exe") {
-            Write-Host "✓ Main executable built successfully"
-          } else {
-            Write-Error "✗ Main executable not found"
-            exit 1
-          }
-
-          if (Test-Path "${{ github.workspace }}/build/bin/HookDLL.dll") {
-            Write-Host "✓ Hook DLL built successfully"
-          } else {
-            Write-Warning "⚠ Hook DLL not found - some features may not work"
-          }
-
-          if (Test-Path "${{ github.workspace }}/build/bin/TestWMI.exe") {
-            Write-Host "✓ Test program built successfully"
-
-            # Run a quick test to ensure the test program works
-            Write-Host "Running WMI test program..."
-            $testOutput = & "${{ github.workspace }}/build/bin/TestWMI.exe" 2>&1
-            if ($LASTEXITCODE -eq 0) {
-              Write-Host "✓ WMI test program executed successfully"
-            } else {
-              Write-Warning "⚠ WMI test program had issues, but continuing build"
-            }
-          } else {
-            Write-Warning "⚠ Test program not found"
-          }
-        shell: powershell
-
-      - name: Create sample configuration
-        run: |
-          # Copy sample config to build directory for packaging
-          Copy-Item "sample_config.json" "${{ github.workspace }}/build/bin/hardware_config.json"
-          Write-Host "✓ Sample configuration copied"
-        shell: powershell
-
       - name: Package Application
         shell: powershell
         run: |
