@@ -226,8 +226,8 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/sample_config.json)
     )
 endif()
 
-# 简化的Qt部署（Windows）
-if(WIN32 AND ENABLE_AUTO_DEPLOY)
+# Qt部署（Windows）
+if(WIN32)
     # 查找Qt5的windeployqt工具
     find_program(WINDEPLOYQT_EXECUTABLE windeployqt
         HINTS
@@ -236,20 +236,29 @@ if(WIN32 AND ENABLE_AUTO_DEPLOY)
             ${VCPKG_ROOT}/installed/x64-windows/tools/qt5/bin
             ${VCPKG_ROOT}/installed/x64-windows/bin
             "C:/Qt/5.15.2/msvc2019_64/bin"
+            $ENV{Qt5_DIR}/../../../bin
+            $ENV{QTDIR}/bin
     )
 
     if(WINDEPLOYQT_EXECUTABLE)
         message(STATUS "Found windeployqt: ${WINDEPLOYQT_EXECUTABLE}")
-        # 使用windeployqt部署Qt库
+        
+        # 部署主程序的Qt库
         add_custom_command(TARGET FakeInfoHardwareSpoofer POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E echo "Deploying Qt5 libraries using windeployqt..."
-            COMMAND ${WINDEPLOYQT_EXECUTABLE} --no-angle $<TARGET_FILE:FakeInfoHardwareSpoofer>
-            COMMENT "Deploying Qt5 libraries using windeployqt"
+            COMMAND ${CMAKE_COMMAND} -E echo "Deploying Qt5 libraries for main application..."
+            COMMAND ${WINDEPLOYQT_EXECUTABLE} --no-angle --no-translations --no-system-d3d-compiler --no-opengl-sw $<TARGET_FILE:FakeInfoHardwareSpoofer>
+            COMMENT "Deploying Qt5 libraries for main application"
         )
+        
+        # 为安装包准备Qt库
+        install(CODE "
+            execute_process(
+                COMMAND ${WINDEPLOYQT_EXECUTABLE} --no-angle --no-translations --no-system-d3d-compiler --no-opengl-sw \${CMAKE_INSTALL_PREFIX}/bin/FakeInfoHardwareSpoofer.exe
+            )
+        ")
     else()
         message(WARNING "windeployqt not found. Qt libraries will not be automatically deployed.")
-        message(STATUS "You can manually deploy using:")
-        message(STATUS "  windeployqt.exe --no-angle <path_to_executable>")
+        message(STATUS "You may need to manually copy Qt libraries or ensure windeployqt is in PATH")
     endif()
 endif()
 

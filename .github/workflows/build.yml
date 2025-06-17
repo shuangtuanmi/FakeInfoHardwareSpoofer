@@ -61,23 +61,71 @@ jobs:
       - name: Build
         run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
 
-      - name: Package Application
-        shell: powershell
+      - name: Deploy Qt libraries
         run: |
-          $version = if ($env:GITHUB_REF -match 'refs/tags/v(.*)') { $matches[1] } else { "dev-$($env:GITHUB_SHA.Substring(0,7))" }
-          Write-Host "Packaging version: $version"
-          .\scripts\package.ps1 -Version $version
+          # Find windeployqt and deploy Qt libraries
+          $qtDir = "${{ env.Qt5_Dir }}"
+          $windeployqt = Join-Path $qtDir "bin\windeployqt.exe"
+
+          if (Test-Path $windeployqt) {
+            Write-Host "Found windeployqt at: $windeployqt"
+            & $windeployqt --no-angle --no-translations --no-system-d3d-compiler --no-opengl-sw "${{ github.workspace }}/build/bin/FakeInfoHardwareSpoofer.exe"
+            Write-Host "✓ Qt libraries deployed successfully"
+          } else {
+            Write-Warning "windeployqt not found at: $windeployqt"
+          }
+        shell: powershell
+
+      - name: Copy additional files
+        run: |
+          # Copy sample config to build directory
+          Copy-Item "sample_config.json" "${{ github.workspace }}/build/bin/hardware_config.json"
+          # Copy README
+          Copy-Item "README.md" "${{ github.workspace }}/build/bin/"
+          Write-Host "✓ Additional files copied"
+        shell: powershell
+
+      - name: Install NSIS
+        run: |
+          $nsisUrl = "https://nsis.sourceforge.io/mediawiki/images/4/4a/Nsis-3.08-setup.exe"
+          Invoke-WebRequest -Uri $nsisUrl -OutFile "nsis-setup.exe"
+          Start-Process -FilePath "nsis-setup.exe" -ArgumentList "/S" -Wait
+          Write-Host "NSIS installed successfully"
+        shell: powershell
+
+      - name: Package with CPack (NSIS installer)
+        run: |
+          cd build
+          # Generate NSIS installer
+          cpack -G NSIS -C Release
+
+          # Also generate ZIP for backup
+          cpack -G ZIP -C Release
+
+          Write-Host "✓ Packages created successfully"
+          Get-ChildItem -Filter "*.exe" | ForEach-Object { Write-Host "  Installer: $($_.Name)" }
+          Get-ChildItem -Filter "*.zip" | ForEach-Object { Write-Host "  Archive: $($_.Name)" }
+        shell: powershell
 
       - name: Verify package contents
         run: |
           Write-Host "Checking package contents..."
-          if (Test-Path "dist") {
-            Get-ChildItem "dist" -Recurse | ForEach-Object {
-              Write-Host "  $($_.FullName)"
-            }
-          } else {
-            Write-Error "Package directory not found"
-            exit 1
+          cd build
+
+          Write-Host "=== Build directory contents ==="
+          Get-ChildItem -Name
+
+          Write-Host "`n=== Binary directory contents ==="
+          if (Test-Path "bin") {
+            Get-ChildItem "bin" -Name
+          }
+
+          Write-Host "`n=== Package files ==="
+          Get-ChildItem -Filter "*.exe" | ForEach-Object { 
+            Write-Host "  Installer: $($_.Name) ($([math]::Round($_.Length/1MB, 2)) MB)"
+          }
+          Get-ChildItem -Filter "*.zip" | ForEach-Object { 
+            Write-Host "  Archive: $($_.Name) ($([math]::Round($_.Length/1MB, 2)) MB)"
           }
         shell: powershell
 
@@ -85,7 +133,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FakeInfoHardwareSpoofer-Windows-x64-${{ github.run_number }}
-          path: dist/
+          path: |
+            build/*.exe
+            build/*.zip
+            build/bin/
           retention-days: 30
 
       - name: Create Release (on tag)
@@ -93,9 +144,34 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/*.zip
+            build/*.exe
+            build/*.zip
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## FakeInfo Hardware Spoofer Release
+
+            **Version:** ${{ github.ref_name }}
+            **Build Date:** ${{ github.run_id }}
+
+            ### Downloads
+            - **Windows Installer (recommended)**: `*.exe` - Complete installation package with Qt libraries
+            - **Portable Archive**: `*.zip` - Portable version for advanced users
+
+            ### Installation
+            1. Download the `.exe` installer file
+            2. Run as administrator
+            3. Follow the installation wizard
+
+            ### What's Included
+            - Main application executable
+            - Hook DLL for advanced functionality
+            - Qt runtime libraries
+            - Sample configuration file
+            - Documentation
+
+            ---
+            *This is an automated release built from commit ${{ github.sha }}*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
