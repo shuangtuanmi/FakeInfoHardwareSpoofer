@@ -6,167 +6,167 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number for the installer'
+        description: "Version number for the installer"
         required: true
-        default: '1.0.0'
+        default: "1.0.0"
 
 jobs:
   create-installer:
     runs-on: windows-2022
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        pattern: FakeInfoHardwareSpoofer-Windows-x64-*
-        merge-multiple: true
-        path: artifacts/
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: FakeInfoHardwareSpoofer-Windows-x64-*
+          merge-multiple: true
+          path: artifacts/
 
-    - name: Setup NSIS
-      run: |
-        $nsisUrl = "https://nsis.sourceforge.io/mediawiki/images/4/4a/Nsis-3.08-setup.exe"
-        Invoke-WebRequest -Uri $nsisUrl -OutFile "nsis-setup.exe"
-        Start-Process -FilePath "nsis-setup.exe" -ArgumentList "/S" -Wait
-        Write-Host "NSIS installed successfully"
+      - name: Setup NSIS
+        run: |
+          $nsisUrl = "https://nsis.sourceforge.io/mediawiki/images/4/4a/Nsis-3.08-setup.exe"
+          Invoke-WebRequest -Uri $nsisUrl -OutFile "nsis-setup.exe"
+          Start-Process -FilePath "nsis-setup.exe" -ArgumentList "/S" -Wait
+          Write-Host "NSIS installed successfully"
 
-    - name: Create installer script
-      shell: powershell
-      run: |
-        $version = if ($env.GITHUB_EVENT_NAME -eq "release") { 
-          $env.GITHUB_REF -replace 'refs/tags/v', '' 
-        } else { 
-          "${{ github.event.inputs.version }}" 
-        }
-        
-        $nsisScript = @"
-        !define APP_NAME "FakeInfo Hardware Spoofer"
-        !define APP_VERSION "$version"
-        !define APP_PUBLISHER "FakeInfo Team"
-        !define APP_URL "https://github.com/${{ github.repository }}"
-        !define APP_SUPPORT_URL "https://github.com/${{ github.repository }}/issues"
+      - name: Create installer script
+        shell: powershell
+        run: |
+          $version = if ($env.GITHUB_EVENT_NAME -eq "release") { 
+            $env.GITHUB_REF -replace 'refs/tags/v', '' 
+          } else { 
+            "${{ github.event.inputs.version }}" 
+          }
 
-        !include "MUI2.nsh"
-        !include "FileFunc.nsh"
+          $nsisScript = @"
+          !define APP_NAME "FakeInfo Hardware Spoofer"
+          !define APP_VERSION "$version"
+          !define APP_PUBLISHER "FakeInfo Team"
+          !define APP_URL "https://github.com/${{ github.repository }}"
+          !define APP_SUPPORT_URL "https://github.com/${{ github.repository }}/issues"
 
-        Name "`${APP_NAME}"
-        OutFile "FakeInfoHardwareSpoofer-v`${APP_VERSION}-Setup.exe"
-        InstallDir "`$PROGRAMFILES64\`${APP_NAME}"
-        InstallDirRegKey HKLM "Software\`${APP_NAME}" "InstallDir"
-        RequestExecutionLevel admin
+          !include "MUI2.nsh"
+          !include "FileFunc.nsh"
 
-        !define MUI_ABORTWARNING
-        !define MUI_FINISHPAGE_RUN "`$INSTDIR\Launch.bat"
-        !define MUI_FINISHPAGE_RUN_TEXT "Launch `${APP_NAME}"
+          Name "`${APP_NAME}"
+          OutFile "FakeInfoHardwareSpoofer-v`${APP_VERSION}-Setup.exe"
+          InstallDir "`$PROGRAMFILES64\`${APP_NAME}"
+          InstallDirRegKey HKLM "Software\`${APP_NAME}" "InstallDir"
+          RequestExecutionLevel admin
 
-        !insertmacro MUI_PAGE_WELCOME
-        !insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
-        !insertmacro MUI_PAGE_DIRECTORY
-        !insertmacro MUI_PAGE_INSTFILES
-        !insertmacro MUI_PAGE_FINISH
+          !define MUI_ABORTWARNING
+          !define MUI_FINISHPAGE_RUN "`$INSTDIR\Launch.bat"
+          !define MUI_FINISHPAGE_RUN_TEXT "Launch `${APP_NAME}"
 
-        !insertmacro MUI_UNPAGE_WELCOME
-        !insertmacro MUI_UNPAGE_CONFIRM
-        !insertmacro MUI_UNPAGE_INSTFILES
-        !insertmacro MUI_UNPAGE_FINISH
+          !insertmacro MUI_PAGE_WELCOME
+          !insertmacro MUI_PAGE_LICENSE "LICENSE.txt"
+          !insertmacro MUI_PAGE_DIRECTORY
+          !insertmacro MUI_PAGE_INSTFILES
+          !insertmacro MUI_PAGE_FINISH
 
-        !insertmacro MUI_LANGUAGE "English"
+          !insertmacro MUI_UNPAGE_WELCOME
+          !insertmacro MUI_UNPAGE_CONFIRM
+          !insertmacro MUI_UNPAGE_INSTFILES
+          !insertmacro MUI_UNPAGE_FINISH
 
-        Section "Main Application" SecMain
-          SetOutPath "`$INSTDIR"
-          File /r "artifacts\FakeInfoHardwareSpoofer\*.*"
-          
-          WriteRegStr HKLM "Software\`${APP_NAME}" "InstallDir" "`$INSTDIR"
-          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "DisplayName" "`${APP_NAME}"
-          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "UninstallString" "`$INSTDIR\Uninstall.exe"
-          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "DisplayIcon" "`$INSTDIR\FakeInfoHardwareSpoofer.exe"
-          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "Publisher" "`${APP_PUBLISHER}"
-          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "URLInfoAbout" "`${APP_URL}"
-          WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "DisplayVersion" "`${APP_VERSION}"
-          WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "NoModify" 1
-          WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "NoRepair" 1
-          
-          WriteUninstaller "`$INSTDIR\Uninstall.exe"
-          
-          CreateDirectory "`$SMPROGRAMS\`${APP_NAME}"
-          CreateShortCut "`$SMPROGRAMS\`${APP_NAME}\`${APP_NAME}.lnk" "`$INSTDIR\Launch.bat"
-          CreateShortCut "`$SMPROGRAMS\`${APP_NAME}\Test WMI.lnk" "`$INSTDIR\TestWMI.exe"
-          CreateShortCut "`$SMPROGRAMS\`${APP_NAME}\Uninstall.lnk" "`$INSTDIR\Uninstall.exe"
-          CreateShortCut "`$DESKTOP\`${APP_NAME}.lnk" "`$INSTDIR\Launch.bat"
-        SectionEnd
+          !insertmacro MUI_LANGUAGE "English"
 
-        Section "Uninstall"
-          Delete "`$INSTDIR\*.*"
-          RMDir /r "`$INSTDIR"
-          
-          Delete "`$SMPROGRAMS\`${APP_NAME}\*.*"
-          RMDir "`$SMPROGRAMS\`${APP_NAME}"
-          Delete "`$DESKTOP\`${APP_NAME}.lnk"
-          
-          DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}"
-          DeleteRegKey HKLM "Software\`${APP_NAME}"
-        SectionEnd
-        "@
-        
-        `$nsisScript | Out-File -FilePath "installer.nsi" -Encoding UTF8
-        Write-Host "Installer script created"
+          Section "Main Application" SecMain
+            SetOutPath "`$INSTDIR"
+            File /r "artifacts\FakeInfoHardwareSpoofer\*.*"
+            
+            WriteRegStr HKLM "Software\`${APP_NAME}" "InstallDir" "`$INSTDIR"
+            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "DisplayName" "`${APP_NAME}"
+            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "UninstallString" "`$INSTDIR\Uninstall.exe"
+            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "DisplayIcon" "`$INSTDIR\FakeInfoHardwareSpoofer.exe"
+            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "Publisher" "`${APP_PUBLISHER}"
+            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "URLInfoAbout" "`${APP_URL}"
+            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "DisplayVersion" "`${APP_VERSION}"
+            WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "NoModify" 1
+            WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}" "NoRepair" 1
+            
+            WriteUninstaller "`$INSTDIR\Uninstall.exe"
+            
+            CreateDirectory "`$SMPROGRAMS\`${APP_NAME}"
+            CreateShortCut "`$SMPROGRAMS\`${APP_NAME}\`${APP_NAME}.lnk" "`$INSTDIR\Launch.bat"
+            CreateShortCut "`$SMPROGRAMS\`${APP_NAME}\Test WMI.lnk" "`$INSTDIR\TestWMI.exe"
+            CreateShortCut "`$SMPROGRAMS\`${APP_NAME}\Uninstall.lnk" "`$INSTDIR\Uninstall.exe"
+            CreateShortCut "`$DESKTOP\`${APP_NAME}.lnk" "`$INSTDIR\Launch.bat"
+          SectionEnd
 
-    - name: Create LICENSE file
-      run: |
-        `$license = @"
-        MIT License
+          Section "Uninstall"
+            Delete "`$INSTDIR\*.*"
+            RMDir /r "`$INSTDIR"
+            
+            Delete "`$SMPROGRAMS\`${APP_NAME}\*.*"
+            RMDir "`$SMPROGRAMS\`${APP_NAME}"
+            Delete "`$DESKTOP\`${APP_NAME}.lnk"
+            
+            DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\`${APP_NAME}"
+            DeleteRegKey HKLM "Software\`${APP_NAME}"
+          SectionEnd
+          "@
 
-        Copyright (c) 2024 FakeInfo Hardware Spoofer
+          `$nsisScript | Out-File -FilePath "installer.nsi" -Encoding UTF8
+          Write-Host "Installer script created"
 
-        Permission is hereby granted, free of charge, to any person obtaining a copy
-        of this software and associated documentation files (the "Software"), to deal
-        in the Software without restriction, including without limitation the rights
-        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-        copies of the Software, and to permit persons to whom the Software is
-        furnished to do so, subject to the following conditions:
+      - name: Create LICENSE file
+        run: |
+          `$license = @"
+          MIT License
 
-        The above copyright notice and this permission notice shall be included in all
-        copies or substantial portions of the Software.
+          Copyright (c) 2024 FakeInfo Hardware Spoofer
 
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-        SOFTWARE.
+          Permission is hereby granted, free of charge, to any person obtaining a copy
+          of this software and associated documentation files (the "Software"), to deal
+          in the Software without restriction, including without limitation the rights
+          to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+          copies of the Software, and to permit persons to whom the Software is
+          furnished to do so, subject to the following conditions:
 
-        IMPORTANT NOTICE:
-        This software is intended for educational and testing purposes only.
-        Users are responsible for ensuring compliance with applicable laws and regulations.
-        The authors do not condone or support any illegal activities.
-        "@
-        
-        `$license | Out-File -FilePath "LICENSE.txt" -Encoding UTF8
-      shell: powershell
+          The above copyright notice and this permission notice shall be included in all
+          copies or substantial portions of the Software.
 
-    - name: Build installer
-      run: |
-        & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
-        if (`$LASTEXITCODE -ne 0) {
-          Write-Error "Installer build failed"
-          exit 1
-        }
-        Write-Host "Installer built successfully"
-      shell: powershell
+          THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+          IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+          FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+          AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+          LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+          OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+          SOFTWARE.
 
-    - name: Upload installer
-      uses: actions/upload-artifact@v4
-      with:
-        name: FakeInfoHardwareSpoofer-Installer
-        path: "*.exe"
+          IMPORTANT NOTICE:
+          This software is intended for educational and testing purposes only.
+          Users are responsible for ensuring compliance with applicable laws and regulations.
+          The authors do not condone or support any illegal activities.
+          "@
 
-    - name: Add installer to release
-      if: github.event_name == 'release'
-      uses: softprops/action-gh-release@v1
-      with:
-        files: "*.exe"
-      env:
-        GITHUB_TOKEN: `${{ secrets.GITHUB_TOKEN }}
+          `$license | Out-File -FilePath "LICENSE.txt" -Encoding UTF8
+        shell: powershell
+
+      - name: Build installer
+        run: |
+          & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
+          if (`$LASTEXITCODE -ne 0) {
+            Write-Error "Installer build failed"
+            exit 1
+          }
+          Write-Host "Installer built successfully"
+        shell: powershell
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: FakeInfoHardwareSpoofer-Installer
+          path: "*.exe"
+
+      - name: Add installer to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.exe"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
