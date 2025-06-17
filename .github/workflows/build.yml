@@ -27,34 +27,33 @@ jobs:
           target: "desktop"
           arch: "win64_msvc2019_64"
 
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: "ef7dbf9f4f5ef2e4d9988157b2b56c7f35b7e3f8"
-          vcpkgDirectory: "${{ github.workspace }}/vcpkg"
-
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Setup CMake
         uses: lukka/get-cmake@latest
 
-      - name: Install vcpkg dependencies (non-Qt only)
+      - name: Install Detours
         run: |
-          ${{ github.workspace }}/vcpkg/vcpkg.exe install detours:x64-windows
-        env:
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+          # Download and install Detours manually
+          git clone https://github.com/microsoft/Detours.git detours
+          cd detours
+          nmake
+          # Create install directory
+          mkdir "${{ github.workspace }}/detours-install/include"
+          mkdir "${{ github.workspace }}/detours-install/lib"
+          # Copy headers and library
+          copy src\*.h "${{ github.workspace }}/detours-install/include/"
+          copy lib.X64\*.lib "${{ github.workspace }}/detours-install/lib/"
+        shell: cmd
 
       - name: Configure CMake
         run: |
           cmake -B ${{ github.workspace }}/build `
-            -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake `
-            -DVCPKG_TARGET_TRIPLET=x64-windows `
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
             -DCMAKE_PREFIX_PATH="${{ env.Qt5_Dir }}" `
+            -DDetours_ROOT="${{ github.workspace }}/detours-install" `
             -G "Visual Studio 17 2022" -A x64
-        env:
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
       - name: Build
         run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
@@ -104,8 +103,6 @@ jobs:
           $version = if ($env:GITHUB_REF -match 'refs/tags/v(.*)') { $matches[1] } else { "dev-$($env:GITHUB_SHA.Substring(0,7))" }
           Write-Host "Packaging version: $version"
           .\scripts\package.ps1 -Version $version
-        env:
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
       - name: Verify package contents
         run: |
