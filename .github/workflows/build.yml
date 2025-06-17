@@ -7,10 +7,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 env:
   BUILD_TYPE: Release
-  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
-  VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
 jobs:
   build-windows:
